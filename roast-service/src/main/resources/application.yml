@@ -16,6 +16,9 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+    table: flyway_roast_history
+    baseline-on-migrate: true
+    baseline-version: '0'
 
 groq:
   api-keys: ${GROQ_API_KEYS:${GROQ_API_KEY}}

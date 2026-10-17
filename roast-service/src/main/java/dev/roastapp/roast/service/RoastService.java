@@ -31,15 +31,18 @@ public class RoastService {
     private final LlmClient llmClient;
     private final PromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
+    private final dev.roastapp.roast.client.ConnectorClient connectorClient;
 
     public RoastService(RoastRepository roastRepository,
                         LlmClient llmClient,
                         PromptBuilder promptBuilder,
-                        ObjectMapper objectMapper) {
+                        ObjectMapper objectMapper,
+                        dev.roastapp.roast.client.ConnectorClient connectorClient) {
         this.roastRepository = roastRepository;
         this.llmClient = llmClient;
         this.promptBuilder = promptBuilder;
         this.objectMapper = objectMapper;
+        this.connectorClient = connectorClient;
     }
 
     @Transactional
@@ -47,9 +50,18 @@ public class RoastService {
         UUID id = UUID.randomUUID();
         String sourcesJoined = String.join(",", request.sources());
 
-        // Step 2 uses sample/hardcoded stats for initial end-to-end verification.
-        // Connector-service will supply live normalized stats in Step 3.
-        String statsJson = generateSampleStatsJson(request.sources());
+        // Step 3: Fetch stats from connector-service
+        String statsJson;
+        dev.roastapp.common.dto.UserStatsResponse statsResponse = connectorClient.fetchStats(userId, request.sources());
+        if (statsResponse != null && statsResponse.stats() != null && !statsResponse.stats().isEmpty()) {
+            try {
+                statsJson = objectMapper.writeValueAsString(statsResponse.stats());
+            } catch (Exception e) {
+                statsJson = generateSampleStatsJson(request.sources());
+            }
+        } else {
+            statsJson = generateSampleStatsJson(request.sources());
+        }
         String statsHash = computeHash(statsJson);
 
         RoastEntity entity = new RoastEntity(

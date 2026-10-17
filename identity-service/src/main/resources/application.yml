@@ -16,14 +16,47 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+    table: flyway_identity_history
+    baseline-on-migrate: true
+    baseline-version: '0'
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET}
+            scope: read:user,user:email,repo
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+          spotify:
+            client-id: ${SPOTIFY_CLIENT_ID}
+            client-secret: ${SPOTIFY_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            scope: user-read-private,user-read-email,user-top-read,user-read-recently-played
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope: openid,email,profile,https://www.googleapis.com/auth/youtube.readonly
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          spotify:
+            authorization-uri: https://accounts.spotify.com/authorize
+            token-uri: https://accounts.spotify.com/api/token
+            user-info-uri: https://api.spotify.com/v1/me
+            user-name-attribute: id
 
 jwt:
   secret: ${JWT_SECRET}
   expiry-minutes: 60
+  cookie-name: roast_token
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
 
 management:
   endpoints:
