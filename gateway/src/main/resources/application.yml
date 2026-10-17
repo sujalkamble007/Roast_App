@@ -6,21 +6,41 @@ spring:
     name: gateway
   cloud:
     gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins:
+              - "${FRONTEND_URL:http://localhost:5173}"
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowed-headers:
+              - "*"
+            allow-credentials: true
+            max-age: 3600
       routes:
-        - id: identity-auth
-          uri: http://localhost:8081
+        # 1. Identity Service Routes (Auth, OAuth2 callbacks, profile)
+        - id: identity-routes
+          uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
           predicates:
-            - Path=/api/v1/auth/**,/api/v1/me
-        - id: roast-service
-          uri: http://localhost:8083
+            - Path=/api/v1/auth/**,/api/v1/me,/oauth2/**,/login/**
+        # 2. Roast Service Routes
+        - id: roast-routes
+          uri: ${ROAST_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/v1/roasts/**
-        - id: share-service
-          uri: http://localhost:8084
+        # 3. Share Service Routes (Public OG previews and share links)
+        - id: share-routes
+          uri: ${SHARE_SERVICE_URL:http://localhost:8084}
           predicates:
             - Path=/s/**,/api/v1/public/**
-      default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Origin
+
+jwt:
+  secret: ${JWT_SECRET}
+  cookie-name: roast_token
 
 management:
   endpoints:
