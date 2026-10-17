@@ -25,3 +25,12 @@ management:
     web:
       exposure:
         include: health,info
+
+r2:
+  endpoint: ${R2_ENDPOINT:}
+  access-key-id: ${R2_ACCESS_KEY_ID:}
+  secret-access-key: ${R2_SECRET_ACCESS_KEY:}
+  bucket-name: ${R2_BUCKET_NAME:roast-cards}
+
+app:
+  base-url: ${APP_BASE_URL:http://localhost:8080}

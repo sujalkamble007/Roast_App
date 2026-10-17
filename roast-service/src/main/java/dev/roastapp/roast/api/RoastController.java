@@ -58,6 +58,15 @@ public class RoastController {
         return ResponseEntity.ok(roastService.listRoasts(userId));
     }
 
+    @PostMapping("/{id}/share")
+    @Operation(summary = "Share a roast", description = "Creates a shareable public link with an OG preview card.")
+    public ResponseEntity<dev.roastapp.roast.client.ShareClient.ShareResponse> shareRoast(
+            @RequestHeader(value = "X-User-Id", defaultValue = "user-dev-demo") String userId,
+            @PathVariable UUID id) {
+
+        return ResponseEntity.ok(roastService.shareRoast(id, userId));
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a roast", description = "Deletes a roast from the user's history.")
     public ResponseEntity<Void> deleteRoast(

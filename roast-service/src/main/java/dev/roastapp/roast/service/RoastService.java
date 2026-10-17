@@ -32,6 +32,7 @@ public class RoastService {
     private final PromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
     private final dev.roastapp.roast.client.ConnectorClient connectorClient;
+    private final dev.roastapp.roast.client.ShareClient shareClient;
     private final QuotaService quotaService;
     private final RoastCacheService roastCacheService;
     private final IdempotencyService idempotencyService;
@@ -41,6 +42,7 @@ public class RoastService {
                         PromptBuilder promptBuilder,
                         ObjectMapper objectMapper,
                         dev.roastapp.roast.client.ConnectorClient connectorClient,
+                        dev.roastapp.roast.client.ShareClient shareClient,
                         QuotaService quotaService,
                         RoastCacheService roastCacheService,
                         IdempotencyService idempotencyService) {
@@ -49,6 +51,7 @@ public class RoastService {
         this.promptBuilder = promptBuilder;
         this.objectMapper = objectMapper;
         this.connectorClient = connectorClient;
+        this.shareClient = shareClient;
         this.quotaService = quotaService;
         this.roastCacheService = roastCacheService;
         this.idempotencyService = idempotencyService;
@@ -180,6 +183,18 @@ public class RoastService {
                 .orElseThrow(() -> new ResourceNotFoundException("Roast", id));
         roastRepository.delete(entity);
         log.info("Deleted roast {} for user {}", id, userId);
+    }
+
+    @Transactional
+    public dev.roastapp.roast.client.ShareClient.ShareResponse shareRoast(UUID id, String userId) {
+        RoastEntity entity = roastRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Roast", id));
+
+        if (entity.getStatus() != RoastStatus.READY) {
+            throw new IllegalStateException("Cannot share a roast that is not READY (status: " + entity.getStatus() + ")");
+        }
+
+        return shareClient.createShare(entity.getId(), entity.getRoastText(), entity.getTone().name(), entity.getSources());
     }
 
     private RoastDto.RoastResponse toDto(RoastEntity entity) {
