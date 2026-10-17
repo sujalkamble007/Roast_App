@@ -32,25 +32,46 @@ public class RoastService {
     private final PromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
     private final dev.roastapp.roast.client.ConnectorClient connectorClient;
+    private final QuotaService quotaService;
+    private final RoastCacheService roastCacheService;
+    private final IdempotencyService idempotencyService;
 
     public RoastService(RoastRepository roastRepository,
                         LlmClient llmClient,
                         PromptBuilder promptBuilder,
                         ObjectMapper objectMapper,
-                        dev.roastapp.roast.client.ConnectorClient connectorClient) {
+                        dev.roastapp.roast.client.ConnectorClient connectorClient,
+                        QuotaService quotaService,
+                        RoastCacheService roastCacheService,
+                        IdempotencyService idempotencyService) {
         this.roastRepository = roastRepository;
         this.llmClient = llmClient;
         this.promptBuilder = promptBuilder;
         this.objectMapper = objectMapper;
         this.connectorClient = connectorClient;
+        this.quotaService = quotaService;
+        this.roastCacheService = roastCacheService;
+        this.idempotencyService = idempotencyService;
     }
 
     @Transactional
-    public RoastDto.RoastResponse initiateRoast(String userId, RoastDto.CreateRoastRequest request) {
+    public RoastDto.RoastResponse initiateRoast(String userId, RoastDto.CreateRoastRequest request, String idempotencyKey) {
+        // 1. Check idempotency
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            var existingId = idempotencyService.getExistingRoastId(userId, idempotencyKey);
+            if (existingId.isPresent()) {
+                var existing = roastRepository.findById(existingId.get());
+                if (existing.isPresent()) {
+                    log.info("Returning idempotent response for key {}", idempotencyKey);
+                    return toDto(existing.get());
+                }
+            }
+        }
+
         UUID id = UUID.randomUUID();
         String sourcesJoined = String.join(",", request.sources());
 
-        // Step 3: Fetch stats from connector-service
+        // 2. Fetch stats from connector-service
         String statsJson;
         dev.roastapp.common.dto.UserStatsResponse statsResponse = connectorClient.fetchStats(userId, request.sources());
         if (statsResponse != null && statsResponse.stats() != null && !statsResponse.stats().isEmpty()) {
@@ -64,6 +85,29 @@ public class RoastService {
         }
         String statsHash = computeHash(statsJson);
 
+        // 3. Check Smart Cache: If identical stats + tone + promptVersion exist, return immediately without consuming quota
+        var cachedRoast = roastCacheService.getCachedRoast(statsHash, request.tone(), PromptBuilder.PROMPT_VERSION);
+        if (cachedRoast.isPresent()) {
+            log.info("Cache hit! Returning ready roast without using quota for user {}", userId);
+            RoastEntity cachedEntity = new RoastEntity(
+                    id,
+                    userId,
+                    RoastStatus.READY,
+                    request.tone(),
+                    sourcesJoined,
+                    statsJson,
+                    statsHash,
+                    PromptBuilder.PROMPT_VERSION
+            );
+            cachedEntity.setRoastText(cachedRoast.get());
+            cachedEntity = roastRepository.save(cachedEntity);
+            if (idempotencyKey != null) idempotencyService.recordKey(userId, idempotencyKey, id);
+            return toDto(cachedEntity);
+        }
+
+        // 4. Cache MISS: Check and consume daily quota (raises 429 if limit exceeded)
+        quotaService.checkAndConsumeQuota(userId);
+
         RoastEntity entity = new RoastEntity(
                 id,
                 userId,
@@ -76,16 +120,17 @@ public class RoastService {
         );
 
         entity = roastRepository.save(entity);
+        if (idempotencyKey != null) idempotencyService.recordKey(userId, idempotencyKey, id);
         log.info("Created roast {} for user {} in status PENDING", id, userId);
 
-        // Trigger async LLM generation
-        generateRoastAsync(id, request.tone(), statsJson, sourcesJoined);
+        // 5. Trigger async LLM generation
+        generateRoastAsync(id, request.tone(), statsJson, sourcesJoined, statsHash);
 
         return toDto(entity);
     }
 
     @Async
-    public void generateRoastAsync(UUID roastId, Tone tone, String statsJson, String sources) {
+    public void generateRoastAsync(UUID roastId, Tone tone, String statsJson, String sources, String statsHash) {
         log.info("Starting async roast generation for roastId {}", roastId);
         try {
             String systemPrompt = promptBuilder.buildSystemPrompt(tone);
@@ -97,6 +142,8 @@ public class RoastService {
                 entity.setRoastText(roastText);
                 entity.setStatus(RoastStatus.READY);
                 roastRepository.save(entity);
+                // Populate cache for future requests
+                roastCacheService.putCachedRoast(statsHash, tone, PromptBuilder.PROMPT_VERSION, roastText);
                 log.info("Roast {} successfully generated and set to READY", roastId);
             });
         } catch (Exception e) {
@@ -107,6 +154,10 @@ public class RoastService {
                 roastRepository.save(entity);
             });
         }
+    }
+
+    public QuotaService.QuotaInfo getQuotaInfo(String userId) {
+        return quotaService.getQuotaInfo(userId);
     }
 
     @Transactional(readOnly = true)

@@ -26,10 +26,19 @@ public class RoastController {
     @Operation(summary = "Initiate a roast", description = "Returns 202 Accepted. The roast is generated asynchronously.")
     public ResponseEntity<RoastDto.RoastResponse> createRoast(
             @RequestHeader(value = "X-User-Id", defaultValue = "user-dev-demo") String userId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody RoastDto.CreateRoastRequest request) {
 
-        RoastDto.RoastResponse response = roastService.initiateRoast(userId, request);
+        RoastDto.RoastResponse response = roastService.initiateRoast(userId, request, idempotencyKey);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+    }
+
+    @GetMapping("/quota")
+    @Operation(summary = "Get daily roast quota", description = "Returns remaining roasts and reset countdown for the day.")
+    public ResponseEntity<dev.roastapp.roast.service.QuotaService.QuotaInfo> getQuota(
+            @RequestHeader(value = "X-User-Id", defaultValue = "user-dev-demo") String userId) {
+
+        return ResponseEntity.ok(roastService.getQuotaInfo(userId));
     }
 
     @GetMapping("/{id}")

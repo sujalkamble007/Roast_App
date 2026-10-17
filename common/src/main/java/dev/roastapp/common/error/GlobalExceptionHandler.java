@@ -31,6 +31,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
     }
 
+    @ExceptionHandler(QuotaExceededException.class)
+    public ResponseEntity<ProblemDetail> handleQuotaExceeded(QuotaExceededException ex) {
+        ProblemDetail problem = ProblemDetailHelper.tooManyRequests(ex.getMessage(), ex.getRetryAfterSeconds());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(org.springframework.http.HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+                .body(problem);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGeneral(Exception ex) {
         ProblemDetail problem = ProblemDetailHelper.internal("An unexpected error occurred.");

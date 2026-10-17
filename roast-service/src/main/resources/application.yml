@@ -19,6 +19,10 @@ spring:
     table: flyway_roast_history
     baseline-on-migrate: true
     baseline-version: '0'
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 groq:
   api-keys: ${GROQ_API_KEYS:${GROQ_API_KEY}}
