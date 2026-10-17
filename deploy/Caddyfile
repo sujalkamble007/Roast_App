@@ -1,0 +1,29 @@
+:80 {
+    encode gzip zstd
+
+    # Gateway API endpoints
+    handle /api/* {
+        reverse_proxy gateway:8080
+    }
+
+    # Public OG preview links
+    handle /s/* {
+        reverse_proxy gateway:8080
+    }
+
+    # OAuth2 authentication routes
+    handle /oauth2/* {
+        reverse_proxy gateway:8080
+    }
+
+    handle /login/* {
+        reverse_proxy gateway:8080
+    }
+
+    # Serve built React Single Page Application with client-side fallback
+    handle {
+        root * /srv
+        try_files {path} /index.html
+        file_server
+    }
+}

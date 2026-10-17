@@ -1,0 +1,151 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: roast-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../web/dist:/srv:ro
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - roast-network
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: gateway/Dockerfile
+    container_name: roast-gateway
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      - IDENTITY_SERVICE_URL=http://identity-service:8081
+      - ROAST_SERVICE_URL=http://roast-service:8083
+      - SHARE_SERVICE_URL=http://share-service:8084
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    depends_on:
+      identity-service:
+        condition: service_healthy
+      roast-service:
+        condition: service_healthy
+      share-service:
+        condition: service_healthy
+    networks:
+      - roast-network
+
+  identity-service:
+    build:
+      context: ..
+      dockerfile: identity-service/Dockerfile
+    container_name: roast-identity-service
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - roast-network
+
+  connector-service:
+    build:
+      context: ..
+      dockerfile: connector-service/Dockerfile
+    container_name: roast-connector-service
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - roast-network
+
+  roast-service:
+    build:
+      context: ..
+      dockerfile: roast-service/Dockerfile
+    container_name: roast-service
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CONNECTOR_SERVICE_URL=http://connector-service:8082
+      - SHARE_SERVICE_URL=http://share-service:8084
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    depends_on:
+      connector-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - roast-network
+
+  share-service:
+    build:
+      context: ..
+      dockerfile: share-service/Dockerfile
+    container_name: roast-share-service
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    networks:
+      - roast-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: roast-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - roast-network
+
+networks:
+  roast-network:
+    driver: bridge
