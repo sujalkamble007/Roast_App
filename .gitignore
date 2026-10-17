@@ -1,0 +1,33 @@
+# Maven
+target/
+*.jar
+*.war
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Environment
+.env
+*.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+web/node_modules/
+web/dist/
+web/.env.local
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
