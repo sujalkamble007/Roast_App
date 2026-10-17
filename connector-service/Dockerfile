@@ -4,10 +4,13 @@ WORKDIR /app
 
 COPY pom.xml ./
 COPY common ./common
-RUN mvn install -pl common -DskipTests
-
+COPY gateway ./gateway
+COPY identity-service ./identity-service
 COPY connector-service ./connector-service
-RUN mvn package -pl connector-service -DskipTests
+COPY roast-service ./roast-service
+COPY share-service ./share-service
+
+RUN --mount=type=cache,target=/root/.m2 mvn clean package -pl connector-service -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 RUN apk add --no-cache curl

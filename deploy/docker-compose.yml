@@ -59,7 +59,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 25s
+      start_period: 45s
     depends_on:
       redis:
         condition: service_healthy
@@ -107,7 +107,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 25s
+      start_period: 45s
     depends_on:
       connector-service:
         condition: service_healthy

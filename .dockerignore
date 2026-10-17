@@ -1,0 +1,11 @@
+**/.git
+**/.github
+**/.agents
+**/node_modules
+**/target
+**/.idea
+**/.vscode
+web/
+deploy/
+Plan.md
+README.md
