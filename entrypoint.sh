@@ -1,19 +1,37 @@
 #!/bin/bash
 set -e
 
-echo "Starting Redis server..."
-redis-server --daemonize yes
+echo "Starting Redis..."
+redis-server --daemonize yes --maxmemory 20mb --maxmemory-policy allkeys-lru
 
-echo "Starting backend microservices with optimized memory..."
-JVM_OPTS="-Xmx80m -Xms32m -XX:+UseSerialGC -XX:MaxMetaspaceSize=64m -XX:ReservedCodeCacheSize=24m -Xss256k"
+# Ultra-low-memory JVM settings for Render Free tier (512MB RAM / 0.1 CPU):
+# 1. TieredStopAtLevel=1: Uses C1 compiler only (cuts JIT memory by 75% and boots 3x faster)
+# 2. CICompilerCount=1: Prevents multi-threaded JIT thrashing on 0.1 CPU
+# 3. UseSerialGC: Lowest memory overhead GC
+# 4. Xss228k: Compact thread stacks
+LOW_MEM_OPTS="-XX:TieredStopAtLevel=1 -XX:+UseSerialGC -XX:CICompilerCount=1 -Xss228k -XX:ReservedCodeCacheSize=14m"
 
-java $JVM_OPTS -jar identity-service.jar > /dev/null 2>&1 &
-java $JVM_OPTS -jar connector-service.jar > /dev/null 2>&1 &
-java $JVM_OPTS -jar roast-service.jar > /dev/null 2>&1 &
-java $JVM_OPTS -jar share-service.jar > /dev/null 2>&1 &
+echo "Starting Gateway immediately on port ${PORT:-10000} to satisfy Render port check..."
+java $LOW_MEM_OPTS -Xmx70m -Xms32m -XX:MaxMetaspaceSize=45m -Dserver.port=${PORT:-10000} -jar gateway.jar &
+GATEWAY_PID=$!
 
-echo "Waiting for microservices to bind..."
+echo "Waiting for Gateway to bind port..."
 sleep 6
 
-echo "Starting Gateway on port ${PORT:-10000}..."
-exec java -Xmx120m -Xms48m -XX:+UseSerialGC -Dserver.port=${PORT:-10000} -jar gateway.jar
+echo "Starting Identity Service..."
+java $LOW_MEM_OPTS -Xmx50m -Xms24m -XX:MaxMetaspaceSize=40m -jar identity-service.jar &
+sleep 4
+
+echo "Starting Connector Service..."
+java $LOW_MEM_OPTS -Xmx40m -Xms20m -XX:MaxMetaspaceSize=35m -jar connector-service.jar &
+sleep 4
+
+echo "Starting Roast Service..."
+java $LOW_MEM_OPTS -Xmx50m -Xms24m -XX:MaxMetaspaceSize=40m -jar roast-service.jar &
+sleep 4
+
+echo "Starting Share Service..."
+java $LOW_MEM_OPTS -Xmx40m -Xms20m -XX:MaxMetaspaceSize=35m -jar share-service.jar &
+
+echo "All services initiated. Keeping container alive on Gateway..."
+wait $GATEWAY_PID
