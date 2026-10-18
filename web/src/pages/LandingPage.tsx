@@ -39,7 +39,12 @@ export const LandingPage: FC<LandingPageProps> = ({ user, onNavigate }) => {
       window.location.href = `http://127.0.0.1:5173/oauth2/authorization/spotify`;
       return;
     }
-    const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    const apiBase = (
+      import.meta.env.VITE_API_BASE_URL ||
+      (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? ''
+        : 'https://roastapp-api.onrender.com')
+    ).replace(/\/$/, '');
     window.location.href = `${apiBase}/oauth2/authorization/${provider}`;
   };
 

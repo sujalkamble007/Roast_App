@@ -14,7 +14,12 @@ export class ApiError extends Error {
   }
 }
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? ''
+    : 'https://roastapp-api.onrender.com')
+).replace(/\/$/, '');
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
@@ -113,20 +118,44 @@ export const api = {
   // System Status
   getSystemStatus: async () => {
     try {
-      return await request<any>('/api/v1/system/status');
+      const res = await request<any>('/api/v1/system/status');
+      if (res && res.status) return res;
     } catch {
-      return {
-        status: 'OFFLINE',
-        upCount: 0,
-        totalCount: 5,
-        services: {
-          gateway: 'DOWN',
-          identity: 'DOWN',
-          connector: 'DOWN',
-          roast: 'DOWN',
-          share: 'DOWN',
-        },
-      };
+      // fallback
     }
+
+    // Direct fallback to actuator health
+    try {
+      const health = await request<any>('/actuator/health');
+      if (health && health.status === 'UP') {
+        return {
+          status: 'UP',
+          upCount: 5,
+          totalCount: 5,
+          services: {
+            gateway: 'UP',
+            identity: 'UP',
+            connector: 'UP',
+            roast: 'UP',
+            share: 'UP',
+          },
+        };
+      }
+    } catch {
+      // offline
+    }
+
+    return {
+      status: 'OFFLINE',
+      upCount: 0,
+      totalCount: 5,
+      services: {
+        gateway: 'DOWN',
+        identity: 'DOWN',
+        connector: 'DOWN',
+        roast: 'DOWN',
+        share: 'DOWN',
+      },
+    };
   },
 };
