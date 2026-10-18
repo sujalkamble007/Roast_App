@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { FC } from 'react';
-import { Activity, ChevronDown, CheckCircle2, Clock, AlertCircle, Server } from 'lucide-react';
+import { ChevronDown, CheckCircle2, Clock, AlertCircle, Server } from 'lucide-react';
 import { api } from '../api/client';
 import type { SystemStatus } from '../api/types';
 

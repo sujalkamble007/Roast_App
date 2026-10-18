@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { FC } from 'react';
-import { ArrowRight, Flame, Shield, Sparkles, Zap, Loader2, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Flame, Shield, Sparkles, Zap } from 'lucide-react';
 import { GithubIcon, SpotifyIcon, YoutubeIcon } from '../components/Icons';
 import type { User, SystemStatus } from '../api/types';
 import { api } from '../api/client';
@@ -81,6 +81,7 @@ export const LandingPage: FC<LandingPageProps> = ({ user, onNavigate }) => {
             </button>
           </div>
         ) : (
+          <div className="max-w-md mx-auto mb-16">
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                 Connect an account to begin
