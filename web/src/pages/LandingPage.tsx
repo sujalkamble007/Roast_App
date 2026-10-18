@@ -10,8 +10,13 @@ interface LandingPageProps {
 
 export const LandingPage: FC<LandingPageProps> = ({ user, onNavigate }) => {
   const handleOAuthLogin = (provider: string) => {
-    // Navigates directly through Gateway OAuth2 handler
-    window.location.href = `/oauth2/authorization/${provider}`;
+    // Spotify strictly requires 127.0.0.1 loopback origin for callbacks; ensure origin matches to share session cookies
+    if (provider === 'spotify' && window.location.hostname === 'localhost') {
+      window.location.href = `http://127.0.0.1:5173/oauth2/authorization/spotify`;
+      return;
+    }
+    const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    window.location.href = `${apiBase}/oauth2/authorization/${provider}`;
   };
 
   return (

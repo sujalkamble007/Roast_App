@@ -1,0 +1,27 @@
+:{$PORT:10000} {
+    encode gzip zstd
+
+    # Gateway API endpoints
+    handle /api/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+
+    # Public OG preview links
+    handle /s/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+
+    # OAuth2 authentication routes
+    handle /oauth2/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+
+    handle /login/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+
+    # Actuator health check endpoint for monitoring / keep-alive pings
+    handle /actuator/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+}

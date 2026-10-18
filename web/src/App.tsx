@@ -7,6 +7,8 @@ import { LandingPage } from './pages/LandingPage';
 import { RoastPage } from './pages/RoastPage';
 import { PublicSharePage } from './pages/PublicSharePage';
 import { HistoryPage } from './pages/HistoryPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { TermsPage } from './pages/TermsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,14 +76,22 @@ export function AppContent() {
 
   // Route matching
   const renderCurrentPage = () => {
-    // 1. Match /r/:id (Public Roast Share View)
+    // 1. Legal / Compliance Routes
+    if (currentPath === '/privacy') {
+      return <PrivacyPage onNavigate={navigate} />;
+    }
+    if (currentPath === '/terms') {
+      return <TermsPage onNavigate={navigate} />;
+    }
+
+    // 2. Match /r/:id (Public Roast Share View)
     const publicShareMatch = currentPath.match(/^\/r\/([a-zA-Z0-9_-]+)/);
     if (publicShareMatch) {
       const shareId = publicShareMatch[1];
       return <PublicSharePage shareId={shareId} onNavigate={navigate} />;
     }
 
-    // 2. Authenticated Routes
+    // 3. Authenticated Routes
     if (currentPath === '/roast') {
       if (!user && !loadingAuth) {
         return <LandingPage user={null} onNavigate={navigate} />;
@@ -122,15 +132,32 @@ export function AppContent() {
       </main>
 
       {/* Footer */}
-      <footer className="glass-panel border-t border-slate-900 py-6 text-center text-xs text-slate-500">
+      <footer className="glass-panel border-t border-slate-900 py-6 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-1.5 font-bold text-slate-400">
             <span>🔥 RoastApp</span>
             <span>•</span>
             <span className="font-normal">Zero Permanent Token Retention</span>
           </div>
-          <div>
-            Built with Spring Boot 3.4, Neon Postgres, Cloudflare R2, Redis, and Groq LLaMA 3.3 70B
+          
+          <div className="flex items-center gap-4 text-slate-400">
+            <button
+              onClick={() => navigate('/privacy')}
+              className="hover:text-orange-400 transition cursor-pointer"
+            >
+              Privacy Policy
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => navigate('/terms')}
+              className="hover:text-orange-400 transition cursor-pointer"
+            >
+              Terms of Service
+            </button>
+          </div>
+
+          <div className="text-slate-600 text-[11px]">
+            Built with Spring Boot 3.4, Neon Postgres, Cloudflare R2 & Groq
           </div>
         </div>
       </footer>

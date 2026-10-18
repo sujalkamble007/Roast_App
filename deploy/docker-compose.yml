@@ -6,9 +6,13 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-:80}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ../web/dist:/srv:ro
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       gateway:
         condition: service_healthy
@@ -21,6 +25,8 @@ services:
       dockerfile: gateway/Dockerfile
     container_name: roast-gateway
     restart: unless-stopped
+    ports:
+      - "8080:8080"
     env_file:
       - ../.env
     environment:
@@ -32,7 +38,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 25s
+      start_period: 120s
     depends_on:
       identity-service:
         condition: service_healthy
@@ -82,7 +88,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 25s
+      start_period: 120s
     depends_on:
       redis:
         condition: service_healthy
@@ -100,7 +106,9 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - CONNECTOR_BASE_URL=http://connector-service:8082
       - CONNECTOR_SERVICE_URL=http://connector-service:8082
+      - SHARE_BASE_URL=http://share-service:8084
       - SHARE_SERVICE_URL=http://share-service:8084
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
@@ -129,7 +137,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 25s
+      start_period: 120s
     networks:
       - roast-network
 
@@ -149,3 +157,7 @@ services:
 networks:
   roast-network:
     driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

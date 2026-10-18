@@ -69,7 +69,9 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
         String registrationId = oauthToken.getAuthorizedClientRegistrationId();
-        Provider provider = Provider.valueOf(registrationId.toUpperCase());
+        Provider provider = "google".equalsIgnoreCase(registrationId)
+                ? Provider.YOUTUBE
+                : Provider.valueOf(registrationId.toUpperCase());
         OAuth2User oauthUser = oauthToken.getPrincipal();
 
         // 1. Extract provider-specific user details
@@ -123,8 +125,12 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         cookie.setMaxAge(3600); // 1 hour
         response.addCookie(cookie);
 
-        // 5. Redirect to frontend
-        getRedirectStrategy().sendRedirect(request, response, frontendUrl + "/roast");
+        // 5. Redirect to frontend preserving host origin (localhost vs 127.0.0.1)
+        String host = request.getHeader("Host");
+        String targetBaseUrl = (host != null && host.contains("127.0.0.1"))
+                ? "http://127.0.0.1:5173"
+                : frontendUrl;
+        getRedirectStrategy().sendRedirect(request, response, targetBaseUrl + "/roast");
     }
 
     private String extractProviderUserId(Provider provider, OAuth2User user) {
