@@ -26,19 +26,28 @@ for i in $(seq 1 40); do
 done
 
 echo "Starting Identity Service..."
-java $LOW_MEM_OPTS -Xmx50m -Xms24m -XX:MaxMetaspaceSize=40m -jar identity-service.jar &
-sleep 5
+java $LOW_MEM_OPTS -Xmx75m -Xms28m -XX:MaxMetaspaceSize=85m -jar identity-service.jar &
+IDENTITY_PID=$!
+
+echo "Waiting for Identity Service to initialize on port 8081..."
+for i in $(seq 1 35); do
+    if curl -s -f http://localhost:8081/actuator/health > /dev/null 2>&1; then
+        echo ">>> Identity Service is READY on port 8081!"
+        break
+    fi
+    sleep 2
+done
 
 echo "Starting Connector Service..."
-java $LOW_MEM_OPTS -Xmx40m -Xms20m -XX:MaxMetaspaceSize=35m -jar connector-service.jar &
-sleep 5
+java $LOW_MEM_OPTS -Xmx40m -Xms20m -XX:MaxMetaspaceSize=45m -jar connector-service.jar &
+sleep 4
 
 echo "Starting Roast Service..."
-java $LOW_MEM_OPTS -Xmx50m -Xms24m -XX:MaxMetaspaceSize=40m -jar roast-service.jar &
-sleep 5
+java $LOW_MEM_OPTS -Xmx60m -Xms24m -XX:MaxMetaspaceSize=65m -jar roast-service.jar &
+sleep 4
 
 echo "Starting Share Service..."
-java $LOW_MEM_OPTS -Xmx40m -Xms20m -XX:MaxMetaspaceSize=35m -jar share-service.jar &
+java $LOW_MEM_OPTS -Xmx40m -Xms20m -XX:MaxMetaspaceSize=45m -jar share-service.jar &
 
 echo "All services running. Keeping container alive on Gateway..."
 wait $GATEWAY_PID
