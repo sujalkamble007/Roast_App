@@ -109,4 +109,24 @@ export const api = {
   getPublicShare: (id: string): Promise<ShareDetails> => request<ShareDetails>(`/api/v1/public/shares/${id}`),
 
   revokeShare: (id: string): Promise<void> => request<void>(`/api/v1/public/shares/${id}`, { method: 'DELETE' }),
+
+  // System Status
+  getSystemStatus: async () => {
+    try {
+      return await request<any>('/api/v1/system/status');
+    } catch {
+      return {
+        status: 'OFFLINE',
+        upCount: 0,
+        totalCount: 5,
+        services: {
+          gateway: 'DOWN',
+          identity: 'DOWN',
+          connector: 'DOWN',
+          roast: 'DOWN',
+          share: 'DOWN',
+        },
+      };
+    }
+  },
 };

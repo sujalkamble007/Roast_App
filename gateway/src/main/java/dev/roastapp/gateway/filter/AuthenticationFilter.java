@@ -34,6 +34,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     // Public paths that do not require authentication
     private static final List<String> PUBLIC_PATH_PREFIXES = List.of(
             "/api/v1/auth/",
+            "/api/v1/system/",
             "/oauth2",
             "/login",
             "/s/",

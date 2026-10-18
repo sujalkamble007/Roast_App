@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import type { FC } from 'react';
-import { ArrowRight, Flame, Shield, Sparkles, Zap } from 'lucide-react';
+import { ArrowRight, Flame, Shield, Sparkles, Zap, Loader2, CheckCircle2 } from 'lucide-react';
 import { GithubIcon, SpotifyIcon, YoutubeIcon } from '../components/Icons';
-import type { User } from '../api/types';
+import type { User, SystemStatus } from '../api/types';
+import { api } from '../api/client';
 
 interface LandingPageProps {
   user: User | null;
@@ -9,7 +11,29 @@ interface LandingPageProps {
 }
 
 export const LandingPage: FC<LandingPageProps> = ({ user, onNavigate }) => {
+  const [sysStatus, setSysStatus] = useState<SystemStatus | null>(null);
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const s = await api.getSystemStatus();
+        setSysStatus(s);
+      } catch {
+        // ignore
+      }
+    };
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const isAuthReady = sysStatus?.services?.identity === 'UP';
+
   const handleOAuthLogin = (provider: string) => {
+    if (sysStatus && !isAuthReady) {
+      alert('The authentication microservice is currently warming up on Render (~30s). Please wait until the green "Operational" badge appears in the top bar before signing in!');
+      return;
+    }
     // Spotify strictly requires 127.0.0.1 loopback origin for callbacks; ensure origin matches to share session cookies
     if (provider === 'spotify' && window.location.hostname === 'localhost') {
       window.location.href = `http://127.0.0.1:5173/oauth2/authorization/spotify`;
@@ -57,9 +81,20 @@ export const LandingPage: FC<LandingPageProps> = ({ user, onNavigate }) => {
             </button>
           </div>
         ) : (
-          <div className="max-w-md mx-auto mb-16">
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
-              Connect an account to begin
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Connect an account to begin
+              </span>
+              {sysStatus && (
+                <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-0.5 rounded-full ${
+                  isAuthReady
+                    ? 'text-emerald-400 bg-emerald-500/10'
+                    : 'text-amber-400 bg-amber-500/10 animate-pulse'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isAuthReady ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                  {isAuthReady ? 'Auth Ready' : 'Warming Up...'}
+                </span>
+              )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* GitHub */}

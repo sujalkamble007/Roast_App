@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import { Flame, History, LogOut, Sparkles, User as UserIcon } from 'lucide-react';
 import type { QuotaInfo, User } from '../api/types';
+import { SystemStatusWidget } from './SystemStatusWidget';
 
 interface NavbarProps {
   user: User | null;
@@ -66,8 +67,10 @@ export const Navbar: FC<NavbarProps> = ({
           </nav>
         )}
 
-        {/* Right action / Profile */}
+        {/* Right action / Profile & Status */}
         <div className="flex items-center gap-3">
+          <SystemStatusWidget />
+
           {user ? (
             <>
               {quota && (

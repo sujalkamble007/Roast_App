@@ -51,3 +51,16 @@ export interface ShareDetails {
   sources: string;
   createdAt: string;
 }
+
+export interface SystemStatus {
+  status: 'UP' | 'STARTING' | 'OFFLINE';
+  upCount: number;
+  totalCount: number;
+  services: {
+    gateway: string;
+    identity: string;
+    connector: string;
+    roast: string;
+    share: string;
+  };
+}
