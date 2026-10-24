@@ -12,7 +12,7 @@ COPY share-service ./share-service
 
 RUN --mount=type=cache,target=/root/.m2 mvn clean package -DskipTests
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:24-jre-alpine
 RUN apk add --no-cache curl bash redis
 
 WORKDIR /app
